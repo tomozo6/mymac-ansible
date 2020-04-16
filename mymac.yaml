@@ -1,0 +1,226 @@
+---
+- name: Mac Setup
+  hosts: 127.0.0.1
+  connection: local
+  vars:
+    brew_packages:
+      - ansible
+      - awscli
+      - bash-completion
+      - git
+      - tree
+      - direnv
+      - jq
+      - node
+      - neovim
+      - tfenv
+      - mas
+      - helm
+    brew_tap_repos:
+      - homebrew/cask
+    brew_cask_packages:
+      - alfred
+      - appcleaner
+      - aws-vault
+      - fritzing
+      - cheatsheet
+      - microsoft-edge
+      - day-o    # 簡易カレンダー
+    # - KeyboardCleanTool
+    # - google-chrome
+    # - iterm2
+    # - docker
+    # - clipy
+    # - dropbox
+    # - firefox
+#    trackpad_multitouch:
+#      - { key: ActuateDetents, type: int, value: 1 }
+#      - { key: Clicking,       type: int, value: 1 }
+#      - { key: DragLock,       type: int, value: 0 }
+#      - { key: Dragging,       type: int, value: 0 }
+#      - { key: FirstClickThreshold, type: int, value: 1 }
+#      - { key: ForceSuppressed, type: int, value: 0 }
+#      - { key: SecondClickThreshold, type: int, value: 0 }
+#      - { key: TrackpadCornerSecondaryClick, type: int, value: 0 }
+#      - { key: TrackpadFiveFingerPinchGesture, type: int, value: 0 }
+#      - { key: TrackpadFourFingerHorizSwipeGesture, type: int, value: 0 }
+#      - { key: TrackpadFourFingerPinchGesture, type: int, value: 0 }
+#      - { key: TrackpadFourFingerVertSwipeGesture, type: int, value: 0 }
+#      - { key: TrackpadHandResting, type: int, value: 0 }
+#      - { key: TrackpadHorizScroll, type: int, value: 0 }
+#      - { key: TrackpadMomentumScroll, type: int, value: 0 }
+#      - { key: , type: int, value: 0 }
+#      - { key: , type: int, value: 0 }
+#      - { key: , type: int, value: 0 }
+#      - { key: , type: int, value: 0 }
+#      - { key: , type: int, value: 0 }
+#      - { key: , type: int, value: 0 }
+
+  tasks:
+    # homebrew関連
+    - block:
+        - name: brew アップデート
+          homebrew:
+            update_homebrew: yes
+
+        - name: brew インストール
+          homebrew:
+            name: "{{ brew_packages }}"
+            state: present
+
+        - name: brew tap repos 追加
+          homebrew_tap:
+            tap: "{{ item }}"
+            state: present
+          with_items: "{{ brew_tap_repos }}"
+          tags: test
+
+        - name: brew cask インストール
+          homebrew_cask:
+            name: "{{ item }}"
+            state: present
+          environment:
+            HOMEBREW_CASK_OPTS: "--appdir=/Applications"
+          with_items: "{{ brew_cask_packages }}"
+          ignore_errors: yes
+      tags: brew
+
+    # ダッシュボード関連
+    - block:
+        - name: Dashboardを無効にする
+          osx_defaults:
+            domain: com.apple.dashboard
+            key: mcx-disabled
+            type: bool
+            value: true
+            state: present
+      tags: dashboard
+
+    # トラックパッド関連
+    - block:
+#        - name: トラックパッドの設定
+#          osx_defaults:
+#            domain: com.apple.AppleMultitouchTrackpad
+#            key: "{{ item.key }}"
+#            type: "{{ item.type }}"
+#            value: "{{ item.value }}"
+#            state: present
+#          with_items: "{{ trackpad_multitouch }}"
+
+        - name: トラックパッド_「副ボタンのクリック(右クリック)」の有効化
+          osx_defaults:
+            domain: com.apple.AppleMultitouchTrackpad
+            key: TrackpadCornerSecondaryClick
+            type: int
+            value: 2
+            state: present
+
+        - name: トラックパッド_「タップでクリック」の有効化
+          osx_defaults:
+            domain: com.apple.AppleMultitouchTrackpad
+            key: Clicking
+            type: int
+            value: 1
+            state: present
+
+        - name: トラックパッドタップの軌跡高速化(1~15)
+          osx_defaults:
+            key: com.apple.trackpad.scaling
+            type: float
+            value: 10
+            state: present
+      tags: trackpad
+
+    # メニュー関連
+    - block:
+        - name: バッテリー残量設定(%表記化)
+          osx_defaults:
+            domain: com.apple.menuextra.battery
+            key: ShowPercent
+            type: string
+            value: YES
+            state: present
+
+        - name: 時刻表示設定(24時間表示、秒表示あり、日付・曜日を表示)
+          osx_defaults:
+            domain: com.apple.menuextra.clock
+            key: DateFormat
+            type: string
+            value: "M\\U6708d\\U65e5(EEE)  H:mm:ss"
+            state: present
+      tags: menu
+
+    # Finder関連
+    - block:
+        - name: デフォルトはカラムビュー表示
+          osx_defaults:
+            domain: com.apple.finder
+            key: FXPreferredViewStyle
+            type: string
+            value: clmv
+            state: present
+
+        - name: 隠しファイルや隠しフォルダを表示
+          osx_defaults:
+            domain: com.apple.finder
+            key: AppleShowAllFiles
+            type: bool
+            value: true
+            state: present
+
+        - name: デスクトップ上にアイコンを表示しない
+          osx_defaults:
+            domain: com.apple.finder
+            key: CreateDesktop
+            type: bool
+            value: false
+            state: present
+
+        - name: タイトルバーにフルパスを表示
+          osx_defaults:
+            domain: com.apple.finder
+            key: _FXShowPosixPathInTitle
+            type: bool
+            value: true
+            state: present
+
+        - name: ステータスバーを表示
+          osx_defaults:
+            domain: com.apple.finder
+            key: ShowStatusBar
+            type: bool
+            value: true
+            state: present
+
+        - name: パスバーを表示
+          osx_defaults:
+            domain: com.apple.finder
+            key: ShowPathbar
+            type: bool
+            value: true
+            state: present
+
+        - name: QuickLook上でテキストの選択を可能に
+          osx_defaults:
+            domain: com.apple.finder
+            key: QLEnableTextSelection
+            type: bool
+            value: true
+            state: present
+
+        - name: ファイル拡張子を常に表示
+          osx_defaults:
+            domain: NSGlobalDomain
+            key: AppleShowAllExtensions
+            type: bool
+            value: true
+            state: present
+
+        - name: フルキーボードアクセスの有効化
+          osx_defaults:
+            domain: NSGlobalDomain
+            key: AppleKeyboardUIMode
+            type: int
+            value: 3
+            state: present
+      tags: finder
