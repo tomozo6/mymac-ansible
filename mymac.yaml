@@ -17,6 +17,7 @@
       - tfenv
       - mas
       - helm
+      - kubectx
     brew_tap_repos:
       - homebrew/cask
     brew_cask_packages:
